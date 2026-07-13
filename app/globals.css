@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0d1117;
+  --bg-elevated: #151b23;
+  --border: #262d38;
+  --text: #e6e9ef;
+  --text-dim: #8b93a3;
+  --accent: #4ade80;
+  --accent-dim: #1a3324;
+  --warn: #fbbf24;
+  --danger: #f87171;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* Thin scrollbar for the dense table views */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
