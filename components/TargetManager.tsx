@@ -23,6 +23,7 @@ export default function TargetManager({ onBatchComplete }: Props) {
   const [running, setRunning] = useState(false);
   const [runResult, setRunResult] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
+  const [pagesPerQuery, setPagesPerQuery] = useState(1);
 
   function loadTargets() {
     fetch("/api/targets")
@@ -89,6 +90,7 @@ export default function TargetManager({ onBatchComplete }: Props) {
             city: t.city,
             category: t.category,
           })),
+          pagesPerQuery,
         }),
       });
       const data = await res.json();
@@ -97,7 +99,7 @@ export default function TargetManager({ onBatchComplete }: Props) {
         setRunResult(`Error: ${data.error}`);
       } else {
         setRunResult(
-          `Done — ${data.queriesRun} searches run, ${data.newLeads} new leads found (${data.rawResults} raw results).` +
+          `Done — ${data.quotaUnitsUsed} SerpAPI call(s) used, ${data.newLeads} new leads found (${data.rawResults} raw results).` +
             (data.errors?.length ? ` ${data.errors.length} query error(s).` : "")
         );
         onBatchComplete();
@@ -176,9 +178,22 @@ export default function TargetManager({ onBatchComplete }: Props) {
                   )}
                   {selected.size === targets.length ? "Deselect all" : "Select all"}
                 </button>
-                <span className="text-xs text-zinc-600">
-                  {selected.size} SerpAPI call{selected.size === 1 ? "" : "s"} if run now
-                </span>
+                <div className="flex items-center gap-2 text-xs text-zinc-600">
+                  <span>Results depth:</span>
+                  <select
+                    value={pagesPerQuery}
+                    onChange={(e) => setPagesPerQuery(parseInt(e.target.value, 10))}
+                    className="rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-zinc-300 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+                  >
+                    <option value={1}>~20/query (1 page)</option>
+                    <option value={2}>~40/query (2 pages)</option>
+                    <option value={3}>~60/query (3 pages)</option>
+                    <option value={5}>~100/query (5 pages)</option>
+                  </select>
+                  <span>
+                    = {selected.size * pagesPerQuery} SerpAPI call{selected.size * pagesPerQuery === 1 ? "" : "s"}
+                  </span>
+                </div>
               </div>
 
               <div className="max-h-64 overflow-y-auto rounded-md border border-zinc-800 divide-y divide-zinc-900">
@@ -224,7 +239,7 @@ export default function TargetManager({ onBatchComplete }: Props) {
                   </>
                 ) : (
                   <>
-                    <Play size={14} /> Run batch ({selected.size})
+                    <Play size={14} /> Run batch ({selected.size * pagesPerQuery} call{selected.size * pagesPerQuery === 1 ? "" : "s"})
                   </>
                 )}
               </button>
