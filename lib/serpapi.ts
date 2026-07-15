@@ -20,9 +20,6 @@ interface SerpApiResponse {
     reviews?: number;
     type?: string;
   }>;
-  serpapi_pagination?: {
-    next_page_token?: string;
-  };
   error?: string;
 }
 
@@ -30,11 +27,14 @@ interface SerpApiResponse {
  * Runs a Google Maps search via SerpAPI for a given category + location,
  * paginating through multiple pages of results.
  *
- * IMPORTANT: each page fetched is a SEPARATE call against your SerpAPI
- * quota — so maxPages=3 means 3 units consumed for this one query, not 1.
- * Default is 1 page (~20 results) to match "1 search = 1 quota unit"
- * assumption elsewhere in the app. Raise maxPages deliberately when you
- * want to trade quota for volume on a specific high-value query.
+ * IMPORTANT: unlike some other SerpApi engines, the `google_maps` engine
+ * does NOT use next_page_token — it uses a plain offset parameter called
+ * `start` (0 = page 1, 20 = page 2, 40 = page 3, etc., ~20 results/page).
+ * SerpApi recommends not going past start=100 (page 6), since results
+ * become duplicated/irrelevant beyond that.
+ *
+ * Each page fetched is a SEPARATE call against your SerpAPI quota — so
+ * maxPages=3 means 3 units consumed for this one query, not 1.
  */
 export async function searchGoogleMaps(
   category: string,
@@ -49,17 +49,18 @@ export async function searchGoogleMaps(
 
   const query = `${category} in ${city}, ${country}`;
   const allResults: SerpMapsResult[] = [];
-  let nextPageToken: string | undefined;
   let pagesFetched = 0;
+  const RESULTS_PER_PAGE = 20;
 
   for (let page = 0; page < maxPages; page++) {
+    const start = page * RESULTS_PER_PAGE;
     const params = new URLSearchParams({
       engine: "google_maps",
       q: query,
       type: "search",
       api_key: apiKey,
     });
-    if (nextPageToken) params.set("next_page_token", nextPageToken);
+    if (start > 0) params.set("start", String(start));
 
     const res = await fetch(`https://serpapi.com/search.json?${params.toString()}`, {
       method: "GET",
@@ -88,10 +89,9 @@ export async function searchGoogleMaps(
       type: r.type,
     }));
 
-    allResults.push(...pageResults);
+    if (pageResults.length === 0) break; // no more results available past this offset
 
-    nextPageToken = data.serpapi_pagination?.next_page_token;
-    if (!nextPageToken || pageResults.length === 0) break; // no more pages available
+    allResults.push(...pageResults);
   }
 
   return { results: allResults, pagesFetched };

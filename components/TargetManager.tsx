@@ -10,6 +10,7 @@ interface Target {
   category: string;
   active: boolean;
   last_run_at: string | null;
+  leads_count: number;
 }
 
 interface Props {
@@ -212,6 +213,19 @@ export default function TargetManager({ onBatchComplete }: Props) {
                     <span className="flex-1 truncate text-zinc-300">
                       <span className="text-zinc-100">{t.category}</span>
                       <span className="text-zinc-600"> — {t.city}, {t.country}</span>
+                    </span>
+                    <span
+                      className={`text-[11px] shrink-0 ${
+                        t.leads_count > 0 ? "text-zinc-500" : "text-zinc-700"
+                      }`}
+                      title={
+                        t.leads_count > 0 && pagesPerQuery === 1
+                          ? "Re-running at depth 1 will likely return mostly duplicates — try increasing Results depth to reach new results further down the ranking."
+                          : undefined
+                      }
+                    >
+                      {t.leads_count > 0 ? `${t.leads_count} leads stored` : "not run yet"}
+                      {t.leads_count > 0 && pagesPerQuery === 1 && " ⚠"}
                     </span>
                     {t.last_run_at && (
                       <span className="text-[11px] text-zinc-600 shrink-0">

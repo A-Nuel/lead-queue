@@ -3,7 +3,7 @@ import { getSupabaseServer } from "@/lib/supabase";
 
 export async function GET() {
   const supabase = getSupabaseServer();
-  const { data, error } = await supabase
+  const { data: targets, error } = await supabase
     .from("target_queries")
     .select("*")
     .order("created_at", { ascending: false });
@@ -12,7 +12,22 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ targets: data });
+  // Attach a rough count of leads already stored for each target's
+  // city+category+country combo, so the UI can warn before re-running
+  // a query that's likely to return mostly duplicates.
+  const withCounts = await Promise.all(
+    (targets || []).map(async (t) => {
+      const { count } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("country", t.country)
+        .eq("city", t.city)
+        .eq("category", t.category);
+      return { ...t, leads_count: count || 0 };
+    })
+  );
+
+  return NextResponse.json({ targets: withCounts });
 }
 
 export async function POST(req: NextRequest) {
