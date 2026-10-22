@@ -1,0 +1,24 @@
+name: Lead Intelligence checks
+on:
+  push:
+    paths:
+      - 'lead_intelligence/**'
+      - '.github/workflows/lead-intelligence-ci.yml'
+  pull_request:
+    paths:
+      - 'lead_intelligence/**'
+      - '.github/workflows/lead-intelligence-ci.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: pip install -r lead_intelligence/requirements.txt
+      - name: Compile Python
+        run: python -m compileall -q lead_intelligence
+      - name: Unit tests
+        run: cd lead_intelligence && python -m unittest discover -p 'test*.py' -v
