@@ -7,14 +7,31 @@ from llm import analyze
 from crm import upsert, list_leads, update, STAGES
 
 st.set_page_config(page_title="Nuel Lead Intelligence",layout="wide")
-st.title("NUEL // Lead Intelligence")
+st.markdown("""<style>
+:root {color-scheme:dark}
+.stApp {background:#080d16;color:#e7edf7}
+[data-testid="stHeader"] {background:#080d16}
+.block-container {max-width:1400px;padding-top:2.4rem}
+h1,h2,h3 {font-family:Inter,system-ui,sans-serif;letter-spacing:-.035em}
+h1 {font-weight:760;color:#f5f8ff}
+[data-testid="stMetric"] {background:#111b2a;border:1px solid #253449;border-radius:12px;padding:18px}
+.stTabs [data-baseweb="tab-list"] {gap:8px;border-bottom:1px solid #24354a}
+.stTabs [data-baseweb="tab"] {background:#101a29;border-radius:8px 8px 0 0;padding:10px 16px;color:#c4d3e5}
+.stTabs [aria-selected="true"] {background:#173550;color:#70d9e5}
+.stButton button[kind="primary"] {background:#19b6c8;color:#06131c;border:0}
+div[data-testid="stAlert"] {border-radius:10px}
+</style>""",unsafe_allow_html=True)
+st.caption("RESEARCH OPERATIONS  /  NUEL INTELLIGENCE")
+st.title("Lead Intelligence")
+st.markdown("Find the right businesses. Verify the evidence. Start better conversations.")
+st.divider()
 st.caption("UK prospect discovery, evidence-based research and human-reviewed sales outreach. No automatic messaging.")
 tabs=st.tabs(["Dashboard / CRM","Industry research","Discover businesses","Website research","Import & batch"])
 
 with tabs[0]:
     st.subheader("Sales pipeline")
     data=list_leads()
-    st.metric("Leads stored",len(data))
+    st.metric("Leads stored",len(data))\n    st.caption("Research data is not proof of buying intent. Review all drafts and verify contact eligibility.")
     if not data.empty:
         st.dataframe(data,use_container_width=True)
         st.download_button("Export CRM",data.to_csv(index=False),"nuel_leads.csv")
