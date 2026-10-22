@@ -31,7 +31,8 @@ tabs=st.tabs(["Dashboard / CRM","Industry research","Discover businesses","Websi
 with tabs[0]:
     st.subheader("Sales pipeline")
     data=list_leads()
-    st.metric("Leads stored",len(data))\n    st.caption("Research data is not proof of buying intent. Review all drafts and verify contact eligibility.")
+    st.metric("Leads stored",len(data))
+    st.caption("Research data is not proof of buying intent. Review all drafts and verify contact eligibility.")
     if not data.empty:
         st.dataframe(data,use_container_width=True)
         st.download_button("Export CRM",data.to_csv(index=False),"nuel_leads.csv")
