@@ -46,7 +46,7 @@ with tabs[2]:
 with tabs[3]:
     url=st.text_input("Public business website","https://example.com")
     name=st.text_input("Business name","there")
-    provider=st.selectbox("Analysis provider",["rules","zai","openrouter","gemini"],index=0)
+    provider=st.selectbox("Analysis provider",["auto","zai","openrouter","nvidia","siliconflow","dashscope","deepseek","gemini","rules"],index=0)
     if st.button("Inspect website"):
         try:
             report=inspect(url)
