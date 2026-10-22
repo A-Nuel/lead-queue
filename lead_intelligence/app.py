@@ -10,6 +10,9 @@ from crm import upsert, list_leads, update, STAGES
 
 st.set_page_config(page_title="Nuel Lead Intelligence",layout="wide")
 # Public Render URLs require an access password. Fail closed when deployed.
+if os.getenv("RENDER") and not os.getenv("DATABASE_URL"):
+    st.error("DATABASE_URL is required on Render. Configure a persistent Supabase PostgreSQL connection.")
+    st.stop()
 password = os.getenv("APP_PASSWORD", "")
 if not password:
     st.error("APP_PASSWORD is not configured. Set a strong password in Render environment settings.")
