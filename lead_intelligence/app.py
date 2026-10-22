@@ -1,3 +1,5 @@
+import os
+import hmac
 import pandas as pd
 import streamlit as st
 from engine import inspect, draft
@@ -7,6 +9,25 @@ from llm import analyze
 from crm import upsert, list_leads, update, STAGES
 
 st.set_page_config(page_title="Nuel Lead Intelligence",layout="wide")
+# Public Render URLs require an access password. Fail closed when deployed.
+if os.getenv("RENDER") and not os.getenv("DATABASE_URL"):
+    st.error("DATABASE_URL is required on Render. Configure a persistent Supabase PostgreSQL connection.")
+    st.stop()
+password = os.getenv("APP_PASSWORD", "")
+if not password:
+    st.error("APP_PASSWORD is not configured. Set a strong password in Render environment settings.")
+    st.stop()
+if not st.session_state.get("authenticated", False):
+    st.title("Nuel Lead Intelligence — Sign in")
+    entered = st.text_input("Access password", type="password")
+    if st.button("Sign in"):
+        if hmac.compare_digest(entered, password):
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Incorrect password")
+    st.stop()
+
 st.markdown("""<style>
 :root {color-scheme:dark}
 .stApp {background:#080d16;color:#e7edf7}
