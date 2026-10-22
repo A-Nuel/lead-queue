@@ -1,41 +1,76 @@
-import io
 import pandas as pd
 import streamlit as st
 from engine import inspect, draft
 from industry import rank
+from discovery import discover
+from llm import analyze
+from crm import upsert, list_leads, update, STAGES
 
 st.set_page_config(page_title="Nuel Lead Intelligence",layout="wide")
 st.title("NUEL // Lead Intelligence")
-st.caption("Evidence-backed website research, industry hypotheses and human-reviewed outreach.")
-tab1,tab2,tab3=st.tabs(["Industry research","Website inspector","Lead batch"])
-with tab1:
-    st.info("Scores are starting hypotheses, not measured market demand. Validate with actual replies and sales.")
+st.caption("UK prospect discovery, evidence-based research and human-reviewed sales outreach. No automatic messaging.")
+tabs=st.tabs(["Dashboard / CRM","Industry research","Discover businesses","Website research","Import & batch"])
+
+with tabs[0]:
+    st.subheader("Sales pipeline")
+    data=list_leads()
+    st.metric("Leads stored",len(data))
+    if not data.empty:
+        st.dataframe(data,use_container_width=True)
+        st.download_button("Export CRM",data.to_csv(index=False),"nuel_leads.csv")
+        with st.form("status"):
+            lead_id=st.selectbox("Lead",data["id"].tolist(),format_func=lambda n: data.loc[data.id==n,"business"].iloc[0])
+            stage=st.selectbox("Stage",STAGES)
+            notes=st.text_area("Notes / follow-up details")
+            if st.form_submit_button("Save stage"):
+                update(lead_id,stage,notes)
+                st.success("Saved. Refresh to view updated data.")
+with tabs[1]:
+    st.info("Heuristic hypotheses, NOT verified market demand. Validate against outreach response and paid deals.")
     st.dataframe(pd.DataFrame(rank()),use_container_width=True)
-with tab2:
+with tabs[2]:
+    st.caption("OpenStreetMap/Overpass data © OpenStreetMap contributors (ODbL). Listings can be sparse or stale.")
+    city=st.text_input("UK city","Manchester")
+    industry=st.selectbox("Industry",["Cleaning","HVAC","Plumbing","Property management","Landscaping","Recruitment agencies"])
+    limit=st.slider("Maximum results",5,100,25,5)
+    if st.button("Discover businesses"):
+        try:
+            results=discover(city,industry,limit)
+            st.session_state["discovered"]=results
+        except Exception as exc: st.error(f"Discovery failed: {exc}")
+    if "discovered" in st.session_state:
+        st.dataframe(pd.DataFrame(st.session_state["discovered"]),use_container_width=True)
+        if st.button("Save discovered businesses to CRM"):
+            upsert(st.session_state["discovered"])
+            st.success("Saved. Check the CRM tab.")
+with tabs[3]:
     url=st.text_input("Public business website","https://example.com")
     name=st.text_input("Business name","there")
+    provider=st.selectbox("Analysis provider",["rules","zai","openrouter","gemini"],index=0)
     if st.button("Inspect website"):
         try:
             report=inspect(url)
-            st.session_state["report"]=report
             st.json(report)
-            st.text_area("Draft — review before sending",draft(name,report),height=130)
-        except Exception as e: st.error(f"Inspection failed: {e}")
-with tab3:
-    upload=st.file_uploader("Import CSV or XLSX with website/url column",type=["csv","xlsx"])
+            result=analyze(name,report,provider)
+            st.json(result)
+            st.text_area("Outreach draft — review before sending",result.get("outreach_draft",draft(name,report)),height=140)
+        except Exception as exc: st.error(f"Inspection failed: {exc}")
+with tabs[4]:
+    upload=st.file_uploader("CSV or XLSX with a website or url column",type=["csv","xlsx"])
     if upload:
         frame=pd.read_csv(upload) if upload.name.lower().endswith(".csv") else pd.read_excel(upload)
-        st.dataframe(frame.head(10))
+        st.dataframe(frame.head(10),use_container_width=True)
         col=next((c for c in frame.columns if c.lower().strip() in ("website","url","website url")),None)
-        if not col: st.warning("Include a website or url column.")
+        if not col: st.warning("Add a website or url column.")
         elif st.button("Inspect up to 20 websites"):
             results=[]
             for _,row in frame.head(20).iterrows():
                 record=row.to_dict()
                 try:
                     report=inspect(row[col])
-                    record.update({"research_score":report["score"],"research_evidence":", ".join(x["signal"] for x in report["evidence"]),"research_error":"","outreach_draft":draft(str(row.get("name",row.get("business","there"))),report)})
-                except Exception as e: record["research_error"]=str(e)
+                    record.update({"research_score":report["score"],"research_evidence":", ".join(x["signal"] for x in report["evidence"]),"research_error":"",
+                    "outreach_draft":draft(str(row.get("name",row.get("business","there"))),report)})
+                except Exception as exc: record["research_error"]=str(exc)
                 results.append(record)
             st.session_state["batch"]=pd.DataFrame(results)
         if "batch" in st.session_state:
