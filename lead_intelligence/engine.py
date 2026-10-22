@@ -15,8 +15,20 @@ def safe_url(value):
         raise ValueError("Unsupported URL")
     host = p.hostname.lower()
     if host == "localhost" or host.endswith((".local", ".internal", ".localhost")): raise ValueError("Private hostname")
-    for info in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM):
-        if not ipaddress.ip_address(info[4][0]).is_global: raise ValueError("Non-public address")
+    try:
+        literal = ipaddress.ip_address(host)
+        if not literal.is_global: raise ValueError("Non-public address")
+    except ValueError as exc:
+        # A ValueError from ip_address means this is a hostname; preserve our explicit rejection.
+        if str(exc) == "Non-public address": raise
+        try:
+            addresses = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+        except OSError as dns_error:
+            raise ValueError("Hostname could not be resolved safely") from dns_error
+        if not addresses: raise ValueError("Hostname has no public addresses")
+        for info in addresses:
+            if not ipaddress.ip_address(info[4][0]).is_global:
+                raise ValueError("Non-public address")
     return value
 
 def inspect(url):
